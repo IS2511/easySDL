@@ -1,4 +1,8 @@
 
+/** @file
+ * @brief Header with easySDL class and etc.
+ */
+
 #ifndef EASYSDL_EASYSDL_H
 #define EASYSDL_EASYSDL_H
 
@@ -8,6 +12,11 @@
 //#include "easySDL_timer.h"
 //#include "easySDL_opengl.h"
 
+/** @class easySDL
+ * @brief Helper static class, used to hide some inner mechanisms.
+ * @warning You actually shouldn't use any of the static methods
+ * from the this class, use their global analogs instead.
+ */
 class easySDL {
 public:
     easySDL() = delete; // Needed?
