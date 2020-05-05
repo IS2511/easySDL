@@ -3,10 +3,24 @@
  * @brief Main file containing basic functions.
  */
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_opengl.h>
+//#include <SDL2/SDL.h>
+//#include <SDL2/SDL_opengl.h>
 
 #include "easySDL.h"
+
+// Main easySDL variables
+
+void (*easySDL::setup)();
+void (*easySDL::update)();
+
+SDL_Window* easySDL::window;
+SDL_GLContext easySDL::glcontext;
+
+bool easySDL::quit_flag = false;
+bool easySDL::mode3d = false;
+uint32_t easySDL::time_step = 0;
+
+
 
 
 // Main easySDL functions
@@ -53,7 +67,7 @@ void easySDL::main(void (*setupPtr)(), void (*updatePtr)()) {
 }
 
 void easySDL::createWindow(const char *title, int w, int h, uint32_t flags) {
-    static bool createWindow_once = true;
+    static bool createWindow_once = false;
     if (!createWindow_once) {
         mode3d = flags && SDL_WINDOW_OPENGL;
 

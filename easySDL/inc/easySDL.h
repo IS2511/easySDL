@@ -59,7 +59,7 @@ public:
     static void createWindow(const char* title, int w, int h, uint32_t flags);
 
 
-    static void getmode3d();
+    static bool getmode3d() { return mode3d; };
 
 private: // Yeah, I'm not documenting private
     static SDL_Window* window;
