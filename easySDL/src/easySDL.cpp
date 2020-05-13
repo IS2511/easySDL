@@ -93,6 +93,7 @@ void easySDL::main(void (*setupPtr)(), void (*updatePtr)()) {
 
             last_step = SDL_GetTicks();
             // TODO: Render here (swap buffers and etc.)
+            // TODO: Add 2D render option here
             SDL_GL_SwapWindow(window);
         } else { // Don't fry the CPU
             SDL_Delay(1);

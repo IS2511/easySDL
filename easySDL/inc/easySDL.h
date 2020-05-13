@@ -36,10 +36,6 @@ public:
     // &nbsp; followed by a space is 2 spaces
     /** @brief Put this in your main() and pass the setup() and update() functions.
      *
-     * @example int main() { <br/>
-     *     &nbsp; &nbsp; easySDL::main(setup, update); <br/>
-     *   }
-     *
      * @param setupPtr Pointer to your setup() function.
      * @param updatePtr Pointer to your update() function.
      */
@@ -82,12 +78,11 @@ private: // Yeah, I'm not documenting private
 
 // Global variables
 
-/** @brief How many milliseconds passed since last update() call.
- *
- * Use for physics calculation and etc.
- */
+/// @brief How many milliseconds passed since last update() call.
 Uint32 frameDelta;
+/// @brief How many frames were drawn, first update() is 0
 Uint32 frameCount = 0;
+/// @brief FPS or frames per second, counted over 10 frames
 float frameRate = 10;
 
 
@@ -150,7 +145,7 @@ void delay(Uint32 ms);
  *
  * @param enable True to enable, false to disable.
  */
-void vsyncMode(bool enable);
+void vsyncMode(bool enable); // TODO: Scrap this and make a more global one. windowMode()?
 
 /// @brief Quit with proper cleanup
 void quit();

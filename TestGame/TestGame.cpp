@@ -1,6 +1,7 @@
 
 #include "easySDL.h"
 
+#include <iostream>
 
 void setup() {
     // Here goes code
@@ -13,6 +14,7 @@ void setup() {
 
 void update() {
     // Here goes code
+    if (frameCount%30 == 0) std::cout << "FPS: " << frameRate << std::endl;
     if (frameCount == 60*5) quit();
 }
 
