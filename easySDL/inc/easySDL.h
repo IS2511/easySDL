@@ -15,7 +15,7 @@
 /** @class easySDL
  * @brief Helper static class, used to hide some inner mechanisms.
  * @warning You actually shouldn't use any of the static methods
- * from the this class, use their global analogs instead.
+ * from the this class (except main()), use their global analogs instead.
  */
 class easySDL {
 public:
@@ -56,7 +56,7 @@ public:
      * @see window()
      * @see window3d()
      */
-    static void createWindow(const char* title, int w, int h, uint32_t flags);
+    static void createWindow(const char* title, int w, int h, Uint32 flags);
 
 
     static bool getmode3d() { return mode3d; };
@@ -67,10 +67,14 @@ private: // Yeah, I'm not documenting private
 
     static void super_setup();
     static void super_update();
+    static void handle_event(SDL_Event* event);
 
     static bool quit_flag;
     static bool mode3d;
-    static uint32_t time_step;
+    static bool vsync;
+    static Uint32 time_step;
+    static Uint32 last_step;
+    static Uint32 frameTimes[10];
 };
 
 
@@ -82,7 +86,9 @@ private: // Yeah, I'm not documenting private
  *
  * Use for physics calculation and etc.
  */
-uint32_t frameDelta;
+Uint32 frameDelta;
+Uint32 frameCount = 0;
+float frameRate = 10;
 
 
 
@@ -98,7 +104,7 @@ uint32_t frameDelta;
  * @param h Window height in screen coordinates.
  * @param flags SDL2 flags for SDL_CreateWindow().
  */
-void window(const char* title, int w, int h, uint32_t flags);
+void window(const char* title, int w, int h, Uint32 flags);
 
 /** @brief Create a window with default SDL2 flags.
  *
@@ -118,7 +124,7 @@ void window(const char* title, int w, int h);
  * @param w Window width in screen coordinates.
  * @param h Window height in screen coordinates.
  */
-void window3d(const char* title, int w, int h, uint32_t flags);
+void window3d(const char* title, int w, int h, Uint32 flags);
 
 /** @brief Create a window with default SDL2 flags and OpenGL context (3D).
  *
@@ -136,7 +142,7 @@ void window3d(const char* title, int w, int h);
  *
  * @param ms Number of milliseconds.
  */
-void delay(uint32_t ms);
+void delay(Uint32 ms);
 
 /** @brief Enable or disable vsync.
  *

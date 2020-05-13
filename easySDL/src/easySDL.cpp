@@ -18,7 +18,10 @@ SDL_GLContext easySDL::glcontext;
 
 bool easySDL::quit_flag = false;
 bool easySDL::mode3d = false;
-uint32_t easySDL::time_step = 0;
+bool easySDL::vsync = false;
+Uint32 easySDL::time_step = 0;
+Uint32 easySDL::last_step = 0;
+Uint32 easySDL::frameTimes[10] = {0};
 
 
 
@@ -42,31 +45,73 @@ void easySDL::super_setup() {
 void easySDL::super_update() {
     // TODO: Screen clear? Buffers? Renderer!?
 
+    SDL_Event event;
+    while (SDL_PollEvent(&event))
+        handle_event(&event);
+
     // Running user update()
     update();
+    frameCount++;
 }
 
 void easySDL::super_quit() {
-    if (mode3d) SDL_GL_DeleteContext(glcontext);
-    SDL_Quit(); // TODO: Figure out how to quit properly?
+    static bool super_quit_once = false;
+    if (!super_quit_once) {
+        if (mode3d) SDL_GL_DeleteContext(glcontext);
+        SDL_Quit(); // TODO: Figure out how to quit properly?
+        quit_flag = true;
+        super_quit_once = true;
+//        printf("[DEBUG] Super quit!\n");
+    }
 }
 
 void easySDL::main(void (*setupPtr)(), void (*updatePtr)()) {
     setup = setupPtr;
     update = updatePtr;
 
+    // Init before setup so quit() works in setup()
+    quit_flag = false;
+
     // Initializing SDL2 + defaults and running user setup()
     super_setup();
 
-    quit_flag = false;
+    last_step = SDL_GetTicks();
     while (!quit_flag) {
-        // TODO: test for SDL_QUIT event
-        super_update(); // TODO: Make a good FPS mechanism
+        Uint32 now = SDL_GetTicks();
+
+        if (now - last_step >= time_step || vsync) { // Check for max FPS
+
+            frameDelta = now - last_step;
+            frameTimes[frameCount%10] = frameDelta;
+            if (frameCount > 8) {
+                frameRate = 0;
+                for (Uint32 frameTime : frameTimes) frameRate += frameTime;
+                frameRate = frameRate/10;
+            }
+
+            super_update();
+
+            last_step = SDL_GetTicks();
+            // TODO: Render here (swap buffers and etc.)
+            SDL_GL_SwapWindow(window);
+        } else { // Don't fry the CPU
+            SDL_Delay(1);
+        }
+
     }
     super_quit();
 }
 
-void easySDL::createWindow(const char *title, int w, int h, uint32_t flags) {
+void easySDL::handle_event(SDL_Event* event) {
+    switch (event->type) { // TODO: Add more events
+        case SDL_QUIT:
+            // TODO: Handle! global Quit()?
+            super_quit();
+            break;
+    }
+}
+
+void easySDL::createWindow(const char *title, int w, int h, Uint32 flags) {
     static bool createWindow_once = false;
     if (!createWindow_once) {
         mode3d = flags && SDL_WINDOW_OPENGL;
@@ -97,7 +142,7 @@ void Error(const char* err) {
 // Global functions
 
 
-void window(const char* title, int w, int h, uint32_t flags) {
+void window(const char* title, int w, int h, Uint32 flags) {
     easySDL::createWindow(title, w, h, flags);
 }
 
@@ -105,7 +150,7 @@ void window(const char* title, int w, int h) {
     window(title, w, h, 0);
 }
 
-void window3d(const char* title, int w, int h, uint32_t flags) {
+void window3d(const char* title, int w, int h, Uint32 flags) {
     window(title, w, h, flags | SDL_WINDOW_OPENGL);
 }
 
@@ -113,7 +158,7 @@ void window3d(const char* title, int w, int h) {
     window(title, w, h, SDL_WINDOW_OPENGL);
 }
 
-void delay(uint32_t ms) {
+void delay(Uint32 ms) {
     SDL_Delay(ms);
 }
 
