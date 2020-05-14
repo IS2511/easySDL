@@ -163,16 +163,18 @@ void delay(Uint32 ms) {
     SDL_Delay(ms);
 }
 
-void vsyncMode(bool enable) { // TODO: all that
-//    if () // TODO: check for 3d
-    if (enable) {
-        if (!SDL_GL_SetSwapInterval(-1)) {
-            if (!SDL_GL_SetSwapInterval(1)) {
-                Error("Failed to enable VSYNC");
-            }
-        }
-    } else {
+void windowMode(Uint32 flags) { // TODO: all that
 
+    if (flags & EASYSDL_WINDOW_VSYNC)
+        if (easySDL::get_mode3d()) { // TODO: check for 3d
+            if (!SDL_GL_SetSwapInterval(-1)) {
+                if (!SDL_GL_SetSwapInterval(1)) {
+                    Error("Failed to enable VSYNC");
+                }
+            }
+        } else {
+
+        }
     }
 }
 

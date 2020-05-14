@@ -12,6 +12,17 @@
 //#include "easySDL_timer.h"
 //#include "easySDL_opengl.h"
 
+#define EASYSDL_WINDOW_FULLSCREEN     SDL_WINDOW_FULLSCREEN
+#define EASYSDL_WINDOW_OPENGL         SDL_WINDOW_OPENGL
+#define EASYSDL_WINDOW_HIDDEN         SDL_WINDOW_HIDDEN
+#define EASYSDL_WINDOW_BORDERLES      SDL_WINDOW_BORDERLESS
+#define EASYSDL_WINDOW_RESIZABLE      SDL_WINDOW_RESIZABLE
+#define EASYSDL_WINDOW_MAXIMIZED      SDL_WINDOW_MAXIMIZED
+#define EASYSDL_WINDOW_MINIMIZED      SDL_WINDOW_MINIMIZED
+#define EASYSDL_WINDOW_INPUT_GRABBED  SDL_WINDOW_INPUT_GRABBED
+#define EASYSDL_WINDOW_ALLOW_HIGHDPI  SDL_WINDOW_ALLOW_HIGHDPI
+#define EASYSDL_WINDOW_VULKAN         SDL_WINDOW_VULKAN
+
 /** @class easySDL
  * @brief Helper static class, used to hide some inner mechanisms.
  * @warning You actually shouldn't use any of the static methods
@@ -55,7 +66,7 @@ public:
     static void createWindow(const char* title, int w, int h, Uint32 flags);
 
 
-    static bool getmode3d() { return mode3d; };
+    static bool get_mode3d() { return mode3d; };
 
 private: // Yeah, I'm not documenting private
     static SDL_Window* window;
@@ -145,9 +156,9 @@ void delay(Uint32 ms);
  *
  * @param enable True to enable, false to disable.
  */
-void vsyncMode(bool enable); // TODO: Scrap this and make a more global one. windowMode()?
+void windowMode(Uint32 flags); // TODO: Scrap this and make a more global one. windowMode()?
 
-/// @brief Quit with proper cleanup
+/// @brief Quit with proper cleanup.
 void quit();
 
 #endif //EASYSDL_EASYSDL_H
