@@ -94,7 +94,7 @@ void easySDL::main(void (*setupPtr)(), void (*updatePtr)()) {
             last_step = SDL_GetTicks();
             // TODO: Render here (swap buffers and etc.)
             // TODO: Add 2D render option here
-            SDL_GL_SwapWindow(window);
+            if (mode3d) SDL_GL_SwapWindow(window);
         } else { // Don't fry the CPU
             SDL_Delay(1);
         }
@@ -163,19 +163,31 @@ void delay(Uint32 ms) {
     SDL_Delay(ms);
 }
 
-void windowMode(Uint32 flags) { // TODO: all that
+void vsyncMode(bool enable) {
+    easySDL::set_vsync(enable);
+}
 
-    if (flags & EASYSDL_WINDOW_VSYNC)
-        if (easySDL::get_mode3d()) { // TODO: check for 3d
-            if (!SDL_GL_SetSwapInterval(-1)) {
-                if (!SDL_GL_SetSwapInterval(1)) {
-                    Error("Failed to enable VSYNC");
-                }
-            }
-        } else {
+bool vsyncMode() {
+    return easySDL::get_vsync();
+}
 
-        }
-    }
+Uint32 windowFlags() {
+    return easySDL::get_windowFlags();
+}
+
+void windowFlags(Uint32 flags) { // TODO: all that
+    easySDL::set_windowFlags(flags);
+//    if (flags & EASYSDL_WINDOW_VSYNC)
+//        if (easySDL::get_mode3d()) { // TODO: check for 3d
+//            if (!SDL_GL_SetSwapInterval(-1)) {
+//                if (!SDL_GL_SetSwapInterval(1)) {
+//                    Error("Failed to enable VSYNC");
+//                }
+//            }
+//        } else {
+//
+//        }
+//    }
 }
 
 void quit() {

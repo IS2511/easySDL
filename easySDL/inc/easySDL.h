@@ -12,17 +12,6 @@
 //#include "easySDL_timer.h"
 //#include "easySDL_opengl.h"
 
-#define EASYSDL_WINDOW_FULLSCREEN     SDL_WINDOW_FULLSCREEN
-#define EASYSDL_WINDOW_OPENGL         SDL_WINDOW_OPENGL
-#define EASYSDL_WINDOW_HIDDEN         SDL_WINDOW_HIDDEN
-#define EASYSDL_WINDOW_BORDERLES      SDL_WINDOW_BORDERLESS
-#define EASYSDL_WINDOW_RESIZABLE      SDL_WINDOW_RESIZABLE
-#define EASYSDL_WINDOW_MAXIMIZED      SDL_WINDOW_MAXIMIZED
-#define EASYSDL_WINDOW_MINIMIZED      SDL_WINDOW_MINIMIZED
-#define EASYSDL_WINDOW_INPUT_GRABBED  SDL_WINDOW_INPUT_GRABBED
-#define EASYSDL_WINDOW_ALLOW_HIGHDPI  SDL_WINDOW_ALLOW_HIGHDPI
-#define EASYSDL_WINDOW_VULKAN         SDL_WINDOW_VULKAN
-
 /** @class easySDL
  * @brief Helper static class, used to hide some inner mechanisms.
  * @warning You actually shouldn't use any of the static methods
@@ -31,17 +20,6 @@
 class easySDL {
 public:
     easySDL() = delete; // Needed?
-
-    /** @brief Executes once at program start.
-     *
-     * It's preferred to call window() here.
-     */
-    static void (*setup)();
-    /** @brief Executes on every frame.
-     *
-     * Drawing and calculating.
-     */
-    static void (*update)();
 
     // &nbsp; is a space in html, <br/> is a line break in html
     // &nbsp; followed by a space is 2 spaces
@@ -67,8 +45,16 @@ public:
 
 
     static bool get_mode3d() { return mode3d; };
+    static bool get_vsync() { return vsync; };
+    static bool get_windowFlags() { return SDL_GetWindowFlags(window); };
+
+    static void set_vsync(bool enable) { vsync = enable; };
+    static void set_windowFlags(Uint32 flags) { return SDL_SetWindowFlags(window, flags); };
 
 private: // Yeah, I'm not documenting private
+    static void (*setup)();
+    static void (*update)();
+
     static SDL_Window* window;
     static SDL_GLContext glcontext;
 
@@ -150,13 +136,31 @@ void window3d(const char* title, int w, int h);
  */
 void delay(Uint32 ms);
 
-/** @brief Enable or disable vsync.
+/** @brief Turns vsync on or off.
  *
  * @note Tries for adaptive vsync first ( SDL_GL_SetSwapInterval(-1) ).
  *
  * @param enable True to enable, false to disable.
  */
-void windowMode(Uint32 flags); // TODO: Scrap this and make a more global one. windowMode()?
+void vsyncMode(bool enable);
+
+/** @brief Get vsync state.
+ *
+ *
+ */
+bool vsyncMode();
+
+/** @brief Set window flags.
+ *
+ * @param flags Window flags.
+ */
+void windowFlags(Uint32 flags);
+
+/** @brief Get window flags.
+ *
+ *
+ */
+Uint32 windowFlags();
 
 /// @brief Quit with proper cleanup.
 void quit();
