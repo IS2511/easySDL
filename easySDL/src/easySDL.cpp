@@ -14,6 +14,7 @@ void (*easySDL::setup)();
 void (*easySDL::update)();
 
 SDL_Window* easySDL::window;
+SDL_Renderer* easySDL::renderer;
 SDL_GLContext easySDL::glcontext;
 
 bool easySDL::quit_flag = false;
@@ -22,6 +23,7 @@ bool easySDL::vsync = false;
 Uint32 easySDL::time_step = 0;
 Uint32 easySDL::last_step = 0;
 Uint32 easySDL::frameTimes[10] = {0};
+SDL_Color easySDL::strokeColor = { 0, 0, 0, 255};
 
 
 
@@ -86,15 +88,18 @@ void easySDL::main(void (*setupPtr)(), void (*updatePtr)()) {
             if (frameCount > 8) {
                 frameRate = 0;
                 for (Uint32 frameTime : frameTimes) frameRate += frameTime;
-                frameRate = frameRate/10;
+                frameRate = 1000/(frameRate/10);
             }
 
             super_update();
 
             last_step = SDL_GetTicks();
             // TODO: Render here (swap buffers and etc.)
-            // TODO: Add 2D render option here
-            if (mode3d) SDL_GL_SwapWindow(window);
+            if (mode3d) {
+                SDL_GL_SwapWindow(window);
+            } else {
+                SDL_RenderPresent(renderer);
+            }
         } else { // Don't fry the CPU
             SDL_Delay(1);
         }
@@ -124,7 +129,36 @@ void easySDL::createWindow(const char *title, int w, int h, Uint32 flags) {
         if (mode3d) {
             glcontext = SDL_GL_CreateContext(window);
             // TODO: set some defaults
+        } else {
+            renderer = SDL_CreateRenderer(window, -1, 0); // TODO: Any flags?
         }
+    }
+}
+
+void easySDL::vsyncMode(bool enable) {
+    if (enable == vsync) return;
+    if (mode3d) {
+        // TODO: Write vsync toggle
+    } else {
+
+    }
+    vsync = enable;
+}
+
+void easySDL::fill(Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
+    if (mode3d) {
+        glColor4b(r, g, b, a);
+    } else {
+        SDL_SetRenderDrawColor(renderer, r, g, b, a);
+    }
+}
+
+void easySDL::stroke(Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
+    strokeColor = {r, g, b, a};
+    if (mode3d) {
+        glColor4b(r, g, b, a);
+    } else {
+        SDL_SetRenderDrawColor(renderer, r, g, b, a);
     }
 }
 
@@ -159,12 +193,9 @@ void window3d(const char* title, int w, int h) {
     window(title, w, h, SDL_WINDOW_OPENGL);
 }
 
-void delay(Uint32 ms) {
-    SDL_Delay(ms);
-}
-
 void vsyncMode(bool enable) {
-    easySDL::set_vsync(enable);
+    if (easySDL::get_vsync() == enable) return;
+    easySDL::vsyncMode(enable);
 }
 
 bool vsyncMode() {
@@ -176,7 +207,8 @@ Uint32 windowFlags() {
 }
 
 void windowFlags(Uint32 flags) { // TODO: all that
-    easySDL::set_windowFlags(flags);
+//    easySDL::set_windowFlags(flags); // TODO: replace/remove
+
 //    if (flags & EASYSDL_WINDOW_VSYNC)
 //        if (easySDL::get_mode3d()) { // TODO: check for 3d
 //            if (!SDL_GL_SetSwapInterval(-1)) {
@@ -193,6 +225,46 @@ void windowFlags(Uint32 flags) { // TODO: all that
 void quit() {
     easySDL::super_quit();
 }
+
+// Time
+void delay(Uint32 ms) {
+    SDL_Delay(ms);
+}
+
+Uint32 millis() {
+    return SDL_GetTicks();
+}
+
+// Color
+void fill(Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
+    easySDL::fill(r, g, b, a);
+};
+void fill(Uint8 r, Uint8 g, Uint8 b) {fill(r, g, b, 255); };
+void fill(SDL_Color c) { fill(c.r, c.g, c.b, c.a); };
+
+void stroke(Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
+    easySDL::stroke(r, g, b, a);
+};
+void stroke(Uint8 r, Uint8 g, Uint8 b) {fill(r, g, b, 255); };
+void stroke(SDL_Color c) { fill(c.r, c.g, c.b, c.a); };
+
+// Matrix
+void pushMatrix() {
+    if (easySDL::get_mode3d()) {
+        glPushMatrix();
+    } else {
+        // TODO: Write a matrix implementation
+    }
+}
+
+void popMatrix() {
+    if (easySDL::get_mode3d()) {
+        glPopMatrix();
+    } else {
+        // TODO: Write a matrix implementation
+    }
+}
+
 
 
 
