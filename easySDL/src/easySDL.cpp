@@ -8,6 +8,8 @@
 
 #include "easySDL.h"
 
+#include <string>
+
 // Main easySDL variables
 
 void (*easySDL::setup)();
@@ -17,6 +19,8 @@ SDL_Window* easySDL::window;
 SDL_Renderer* easySDL::renderer;
 SDL_GLContext easySDL::glcontext;
 
+int easySDL::main_return_code = 0;
+bool easySDL::createWindow_once = false;
 bool easySDL::quit_flag = false;
 bool easySDL::mode3d = false;
 bool easySDL::vsync = false;
@@ -28,6 +32,31 @@ SDL_Color easySDL::strokeColor = { 0, 0, 0, 255};
 
 
 
+// Utility functions (not visible)
+
+void ErrorSDL(std::string err) {
+    printf("[SDL_ERROR] %s\nSDL error:%s\n", err.c_str(), SDL_GetError());
+}
+
+void Error(std::string err) {
+    printf("[ERROR] %s\n", err.c_str());
+}
+
+void Warn(std::string str) {
+    printf("[WARNING] %s\n", str.c_str());
+}
+
+void Log(std::string str) {
+    printf("[LOG] %s\n", str.c_str());
+}
+
+void Debug(std::string str) {
+    printf("[DEBUG] %s\n", str.c_str());
+}
+
+
+
+
 // Main easySDL functions
 
 
@@ -35,13 +64,19 @@ void easySDL::super_setup() {
     // Initializing SDL2
     if (SDL_Init(SDL_INIT_EVERYTHING) < 0) { // TODO: Initialize only needed?
         printf("Error initializing SDL: %s\n", SDL_GetError());
+        quit_flag = true;
+        main_return_code = -1; // Critical failure or something
     }
 
     // Setting defaults
-    time_step = 1000 / 60; // Default FPS is 60, TODO: VSYNC off?
+    time_step = 1000 / 60; // Default FPS is 60
 
     // Running user setup()
     setup();
+
+    if (!createWindow_once) {
+        Warn("No window created in setup!");
+    }
 }
 
 void easySDL::super_update() {
@@ -51,8 +86,12 @@ void easySDL::super_update() {
     while (SDL_PollEvent(&event))
         handle_event(&event);
 
+    pmouseX = mouseX; pmouseY = mouseY;
+    SDL_GetMouseState(&mouseX, &mouseY);
+
     // Running user update()
     update();
+
     frameCount++;
 }
 
@@ -67,7 +106,7 @@ void easySDL::super_quit() {
     }
 }
 
-void easySDL::main(void (*setupPtr)(), void (*updatePtr)()) {
+int easySDL::main(void (*setupPtr)(), void (*updatePtr)()) {
     setup = setupPtr;
     update = updatePtr;
 
@@ -106,6 +145,7 @@ void easySDL::main(void (*setupPtr)(), void (*updatePtr)()) {
 
     }
     super_quit();
+    return main_return_code;
 }
 
 void easySDL::handle_event(SDL_Event* event) {
@@ -118,7 +158,7 @@ void easySDL::handle_event(SDL_Event* event) {
 }
 
 void easySDL::createWindow(const char *title, int w, int h, Uint32 flags) {
-    static bool createWindow_once = false;
+//    static bool createWindow_once = false;
     if (!createWindow_once) {
         mode3d = flags && SDL_WINDOW_OPENGL;
 
@@ -126,19 +166,33 @@ void easySDL::createWindow(const char *title, int w, int h, Uint32 flags) {
                                   SDL_WINDOWPOS_CENTERED,
                                   SDL_WINDOWPOS_CENTERED,
                                   w, h, flags);
+        width = w; height = h;
         if (mode3d) {
             glcontext = SDL_GL_CreateContext(window);
+            vsyncMode(false); // vsync is off by default
+            glEnable(GL_DEPTH_TEST);
             // TODO: set some defaults
         } else {
             renderer = SDL_CreateRenderer(window, -1, 0); // TODO: Any flags?
         }
+        createWindow_once = true;
     }
 }
 
 void easySDL::vsyncMode(bool enable) {
     if (enable == vsync) return;
     if (mode3d) {
-        // TODO: Write vsync toggle
+        if (enable) {
+            if (!SDL_GL_SetSwapInterval(-1)) {
+                if (!SDL_GL_SetSwapInterval(1)) {
+                    ErrorSDL("Failed to enable VSYNC");
+                }
+            }
+        } else {
+            if (!SDL_GL_SetSwapInterval(0)) {
+                ErrorSDL("Failed to disable VSYNC");
+            }
+        }
     } else {
 
     }
@@ -154,21 +208,7 @@ void easySDL::fill(Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
 }
 
 void easySDL::stroke(Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
-    strokeColor = {r, g, b, a};
-    if (mode3d) {
-        glColor4b(r, g, b, a);
-    } else {
-        SDL_SetRenderDrawColor(renderer, r, g, b, a);
-    }
-}
-
-
-
-
-// Utility functions (not visible)
-
-void Error(const char* err) {
-    printf("%s\nSDL error:%s\n", err, SDL_GetError());
+    strokeColor = {r, g, b, a}; // TODO: Write implementation for stroke
 }
 
 
@@ -194,7 +234,6 @@ void window3d(const char* title, int w, int h) {
 }
 
 void vsyncMode(bool enable) {
-    if (easySDL::get_vsync() == enable) return;
     easySDL::vsyncMode(enable);
 }
 
@@ -209,21 +248,19 @@ Uint32 windowFlags() {
 void windowFlags(Uint32 flags) { // TODO: all that
 //    easySDL::set_windowFlags(flags); // TODO: replace/remove
 
-//    if (flags & EASYSDL_WINDOW_VSYNC)
-//        if (easySDL::get_mode3d()) { // TODO: check for 3d
-//            if (!SDL_GL_SetSwapInterval(-1)) {
-//                if (!SDL_GL_SetSwapInterval(1)) {
-//                    Error("Failed to enable VSYNC");
-//                }
-//            }
-//        } else {
-//
-//        }
-//    }
 }
 
 void quit() {
     easySDL::super_quit();
+}
+
+// Utils
+float radians(float degrees) {
+    return degrees*(PI/180);
+}
+
+float degrees(float radians) {
+    return radians*(180/PI);
 }
 
 // Time
@@ -238,15 +275,135 @@ Uint32 millis() {
 // Color
 void fill(Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
     easySDL::fill(r, g, b, a);
-};
-void fill(Uint8 r, Uint8 g, Uint8 b) {fill(r, g, b, 255); };
-void fill(SDL_Color c) { fill(c.r, c.g, c.b, c.a); };
+}
+void fill(Uint8 r, Uint8 g, Uint8 b) { fill(r, g, b, 255); }
+void fill(Uint8 c) { fill(c, c, c, 255); }
+void fill(SDL_Color color) { fill(color.r, color.g, color.b, color.a); }
 
 void stroke(Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
     easySDL::stroke(r, g, b, a);
-};
-void stroke(Uint8 r, Uint8 g, Uint8 b) {fill(r, g, b, 255); };
-void stroke(SDL_Color c) { fill(c.r, c.g, c.b, c.a); };
+}
+void stroke(Uint8 r, Uint8 g, Uint8 b) { stroke(r, g, b, 255); }
+void stroke(Uint8 c) { stroke(c, c, c, 255); }
+void stroke(SDL_Color color) { stroke(color.r, color.g, color.b, color.a); }
+
+void background(Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
+    glClearColor((float)r/255, (float)g/255, (float)b/255, (float)a/255);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+void background(Uint8 r, Uint8 g, Uint8 b) { background(r, g, b, 255); }
+void background(Uint8 c) { background(c, c, c, 255); }
+void background(SDL_Color color) { background(color.r, color.g, color.b, color.a); }
+
+// 2D primitives
+//void rect(GLfloat x, GLfloat y, GLfloat w, GLfloat h) {
+//
+//}
+
+// 3D primitives
+void box(GLfloat w, GLfloat h, GLfloat d) {
+    if (!easySDL::get_mode3d()) return;
+    if (w == 0 or h == 0 or d == 0) return;
+    w = w/width;
+    h = h/width; // TODO: Is this correct?
+    d = d/width; // TODO: Is this correct?
+    glScalef(w, h, d);
+
+    // Fill
+    GLfloat currentColor[4];
+    glGetFloatv(GL_CURRENT_COLOR, currentColor);
+    if (currentColor[3] != 0.0f) {
+        glBegin(GL_QUADS);
+        // Top
+        glNormal3f(0.0f, 1.0f, 0.0f);
+        glVertex3f(-0.5f, 0.5f, 0.5f);
+        glVertex3f(0.5f, 0.5f, 0.5f);
+        glVertex3f(0.5f, 0.5f, -0.5f);
+        glVertex3f(-0.5f, 0.5f, -0.5f);
+
+        // Front
+        glNormal3f(0.0f, 0.0f, 1.0f);
+        glVertex3f(0.5f, -0.5f, 0.5f);
+        glVertex3f(0.5f, 0.5f, 0.5f);
+        glVertex3f(-0.5f, 0.5f, 0.5f);
+        glVertex3f(-0.5f, -0.5f, 0.5f);
+
+        // Right
+        glNormal3f(1.0f, 0.0f, 0.0f);
+        glVertex3f(0.5f, 0.5f, -0.5f);
+        glVertex3f(0.5f, 0.5f, 0.5f);
+        glVertex3f(0.5f, -0.5f, 0.5f);
+        glVertex3f(0.5f, -0.5f, -0.5f);
+
+        // Left
+        glNormal3f(-1.0f, 0.0f, 0.0f);
+        glVertex3f(-0.5f, -0.5f, 0.5f);
+        glVertex3f(-0.5f, 0.5f, 0.5f);
+        glVertex3f(-0.5f, 0.5f, -0.5f);
+        glVertex3f(-0.5f, -0.5f, -0.5f);
+
+        // Bottom
+        glNormal3f(0.0f, -1.0f, 0.0f);
+        glVertex3f(0.5f, -0.5f, 0.5f);
+        glVertex3f(-0.5f, -0.5f, 0.5f);
+        glVertex3f(-0.5f, -0.5f, -0.5f);
+        glVertex3f(0.5f, -0.5f, -0.5f);
+
+        // Back
+        glNormal3f(0.0f, 0.0f, -1.0f);
+        glVertex3f(0.5f, 0.5f, -0.5f);
+        glVertex3f(0.5f, -0.5f, -0.5f);
+        glVertex3f(-0.5f, -0.5f, -0.5f);
+        glVertex3f(-0.5f, 0.5f, -0.5f);
+
+        glEnd();
+    }
+
+    // Stroke
+    if (easySDL::get_strokeColor().a != 0) {
+        glBegin(GL_LINE_STRIP); // TODO: Make proper lines idiot
+        // Top
+        glVertex3f(-0.5f, 0.5f, 0.5f);
+        glVertex3f(0.5f, 0.5f, 0.5f);
+        glVertex3f(0.5f, 0.5f, -0.5f);
+        glVertex3f(-0.5f, 0.5f, -0.5f);
+
+        // Front
+        glVertex3f(0.5f, -0.5f, 0.5f);
+        glVertex3f(0.5f, 0.5f, 0.5f);
+        glVertex3f(-0.5f, 0.5f, 0.5f);
+        glVertex3f(-0.5f, -0.5f, 0.5f);
+
+        // Right
+        glVertex3f(0.5f, 0.5f, -0.5f);
+        glVertex3f(0.5f, 0.5f, 0.5f);
+        glVertex3f(0.5f, -0.5f, 0.5f);
+        glVertex3f(0.5f, -0.5f, -0.5f);
+
+        // Left
+        glVertex3f(-0.5f, -0.5f, 0.5f);
+        glVertex3f(-0.5f, 0.5f, 0.5f);
+        glVertex3f(-0.5f, 0.5f, -0.5f);
+        glVertex3f(-0.5f, -0.5f, -0.5f);
+
+        // Bottom
+        glVertex3f(0.5f, -0.5f, 0.5f);
+        glVertex3f(-0.5f, -0.5f, 0.5f);
+        glVertex3f(-0.5f, -0.5f, -0.5f);
+        glVertex3f(0.5f, -0.5f, -0.5f);
+
+        // Back
+        glVertex3f(0.5f, 0.5f, -0.5f);
+        glVertex3f(0.5f, -0.5f, -0.5f);
+        glVertex3f(-0.5f, -0.5f, -0.5f);
+        glVertex3f(-0.5f, 0.5f, -0.5f);
+
+        glEnd();
+    }
+}
+void box(GLfloat size) {
+    box(size, size, size);
+}
 
 // Matrix
 void pushMatrix() {
@@ -254,6 +411,7 @@ void pushMatrix() {
         glPushMatrix();
     } else {
         // TODO: Write a matrix implementation
+        Warn("No matrix manipulation for 2D mode yet!");
     }
 }
 
@@ -262,16 +420,37 @@ void popMatrix() {
         glPopMatrix();
     } else {
         // TODO: Write a matrix implementation
+        Warn("No matrix manipulation for 2D mode yet!");
     }
 }
 
+void translate(GLfloat x, GLfloat y, GLfloat z) {
+    if (easySDL::get_mode3d()) {
+        glTranslatef(x/width, y/height, z/width); // TODO: Is this right?
+    } else {
+        if (z != 0.0f) return;
+        Warn("No matrix manipulation for 2D mode yet!");
+    }
+}
+void translate(GLfloat x, GLfloat y) {
+    translate(x, y, 0);
+}
 
-
-
-
-
-
-
-
-
-
+void rotateX(GLfloat angle) {
+    if (!easySDL::get_mode3d()) return;
+    glRotatef(angle, 1.0f, 0.0f, 0.0f);
+}
+void rotateY(GLfloat angle) {
+    if (!easySDL::get_mode3d()) return;
+    glRotatef(angle, 0.0f, 1.0f, 0.0f);
+}
+void rotateZ(GLfloat angle) {
+    if (easySDL::get_mode3d()) {
+        glRotatef(angle, 0.0f, 0.0f, 1.0f);
+    } else {
+        Warn("No matrix manipulation for 2D mode yet!");
+    }
+}
+void rotate(GLfloat angle) {
+    rotateZ(angle);
+}

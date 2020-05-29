@@ -12,8 +12,12 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 
-//#include "easySDL_timer.h"
 //#include "easySDL_opengl.h"
+
+const float TWO_PI = 6.2831855f;
+const float PI = 3.1415927f;
+const float HALF_PI = 1.5707964f;
+const float QUARTER_PI = 0.7853982f;
 
 /** @class easySDL
  * @brief Helper static class, used to hide some inner mechanisms.
@@ -24,12 +28,12 @@ class easySDL {
 public:
     easySDL() = delete; // Needed?
 
-//    /** @brief Put this in your main() and pass the setup() and update() functions.
-//     *
-//     * @param setupPtr Pointer to your setup() function.
-//     * @param updatePtr Pointer to your update() function.
-//     */
-    static void main(void (*setupPtr)(), void (*updatePtr)());
+    /** @brief Put this in your main() and pass the setup() and update() functions.
+     *
+     * @param setupPtr Pointer to your setup() function.
+     * @param updatePtr Pointer to your update() function.
+     */
+    static int main(void (*setupPtr)(), void (*updatePtr)());
 
 //    /** @brief Not intended for usage, use quit() instead.
 //     *
@@ -49,6 +53,9 @@ public:
     static bool get_mode3d() { return mode3d; };
     static bool get_vsync() { return vsync; };
     static bool get_windowFlags() { return SDL_GetWindowFlags(window); };
+//    static bool get_windowWidth() { int w = 0; SDL_GetWindowSize(window, &w, nullptr); return w; };
+//    static bool get_windowHeight() { int h = 0; SDL_GetWindowSize(window, nullptr, &h); return h; };
+    static SDL_Color get_strokeColor() { return strokeColor; };
 //    static void set_windowFlags(Uint32 flags) { return SDL_SetWindowFlags(window, flags); }; // TODO: remove/replace
 
 
@@ -71,6 +78,8 @@ private: // Yeah, I'm not documenting private
     static void super_update();
     static void handle_event(SDL_Event* event);
 
+    static int main_return_code;
+    static bool createWindow_once;
     static bool quit_flag;
     static bool mode3d;
     static bool vsync;
@@ -87,10 +96,22 @@ private: // Yeah, I'm not documenting private
 
 /// @brief How many milliseconds passed since last update() call.
 Uint32 frameDelta;
-/// @brief How many frames were drawn, first update() is 0
+/// @brief How many frames were drawn, first update() is 0.
 Uint32 frameCount = 0;
-/// @brief FPS or frames per second, counted over 10 frames
+/// @brief FPS or frames per second, counted over 10 frames.
 float frameRate = 10;
+/// @brief Window width in pixels.
+Uint32 width = 1;
+/// @brief Window height in pixels.
+Uint32 height = 1;
+/// @brief Mouse X position in pixels relative to window.
+int mouseX = 0;
+/// @brief Mouse Y position in pixels relative to window.
+int mouseY = 0;
+/// @brief Previous mouse X position in pixels relative to window.
+int pmouseX = 0;
+/// @brief Previous mouse Y position in pixels relative to window.
+int pmouseY = 0;
 
 
 
@@ -167,6 +188,30 @@ Uint32 windowFlags();
 /// @brief Quit with proper cleanup.
 void quit();
 
+// Utils
+/** @brief Converts a degree measurement to its corresponding value in radians.
+ *
+ * Radians and degrees are two ways of measuring the same thing.
+ * There are 360 degrees in a circle and 2*PI radians in a circle.
+ * For example, 90° = PI/2 = 1.5707964.
+ * All trigonometric functions in easySDL require their parameters to be specified in radians.
+ *
+ * @param degrees degree value to convert to radians
+ * @return radians converted from degrees
+ */
+float radians(float degrees);
+/** @brief Converts a radian measurement to its corresponding value in degrees.
+ *
+ * Radians and degrees are two ways of measuring the same thing.
+ * There are 360 degrees in a circle and 2*PI radians in a circle.
+ * For example, 90° = PI/2 = 1.5707964.
+ * All trigonometric functions in easySDL require their parameters to be specified in radians.
+ *
+ * @param radians radian value to convert to degrees
+ * @return degrees converted from radians
+ */
+float degrees(float radians);
+
 // Time
 /** @brief Wait a specified number of milliseconds before returning.
  *
@@ -197,11 +242,16 @@ void fill(Uint8 r, Uint8 g, Uint8 b, Uint8 a);
  * @param b The blue value (0-255)
  */
 void fill(Uint8 r, Uint8 g, Uint8 b);
+/** @brief Set the fill color. Alpha is 255 by default.
+ *
+ * @param r The red value (0-255)
+ */
+void fill(Uint8 c);
 /** @brief Set the fill color.
  *
  * @note If the opacity is 0 object drawing will be skipped.
  *
- * @param color Color to use.
+ * @param c Same for Red, Green and Blue (0-255)
  */
 void fill(SDL_Color color);
 
@@ -222,6 +272,11 @@ void stroke(Uint8 r, Uint8 g, Uint8 b, Uint8 a);
  * @param b The blue value (0-255)
  */
 void stroke(Uint8 r, Uint8 g, Uint8 b);
+/** @brief Set the stroke color. Alpha is 255 by default.
+ *
+ * @param c Same for Red, Green and Blue (0-255)
+ */
+void stroke(Uint8 c);
 /** @brief Set the stroke color.
  *
  * @note If the opacity is 0 stroke drawing will be skipped.
@@ -229,6 +284,43 @@ void stroke(Uint8 r, Uint8 g, Uint8 b);
  * @param color Color to use.
  */
 void stroke(SDL_Color color);
+
+/** @brief Fill the background with color.
+ *
+ * @note If the opacity is 0 stroke drawing will be skipped.
+ *
+ * @param r The red value (0-255)
+ * @param g The green value (0-255)
+ * @param b The blue value (0-255)
+ * @param a The alpha value, opacity (0-255)
+ */
+void background(Uint8 r, Uint8 g, Uint8 b, Uint8 a);
+/** @brief Fill the background with color. Alpha is 255 by default.
+ *
+ * @param r The red value (0-255)
+ * @param g The green value (0-255)
+ * @param b The blue value (0-255)
+ */
+void background(Uint8 r, Uint8 g, Uint8 b);
+/** @brief Fill the background with color. Alpha is 255 by default.
+ *
+ * @param c Same for Red, Green and Blue (0-255)
+ */
+void background(Uint8 c);
+/** @brief Fill the background with color.
+ *
+ * @note If the opacity is 0 stroke drawing will be skipped.
+ *
+ * @param color Color to use.
+ */
+void background(SDL_Color color);
+
+// 2D primitives
+//void rect(GLfloat x, GLfloat y, GLfloat w, GLfloat h)
+
+// 3D primitives
+void box(GLfloat w, GLfloat h, GLfloat d);
+void box(GLfloat size);
 
 // Matrix
 /** @brief Pushes current transformation matrix to the stack.
@@ -246,5 +338,88 @@ void pushMatrix();
  * pushMatrix() and popMatrix() are used in conjuction with the other transformation functions and may be embedded to control the scope of the transformations.
  */
 void popMatrix();
+
+/** @brief Specifies an amount to displace objects within the display window.
+ *
+ * Transformations are cumulative and apply to everything that happens after and subsequent calls to the function accumulates the effect.
+ * For example, calling translate(50, 0) and then translate(20, 0) is the same as translate(70, 0).
+ * If translate() is called within update(), the transformation is reset when the loop begins again.
+ * This function can be further controlled by using pushMatrix() and popMatrix().
+ *
+ * @note Using this function with the z parameter requires using window3d().
+ *
+ * @param x Amount to move left/right
+ * @param y Amount to move up/down
+ * @param z Amount to move toward/away
+ */
+void translate(GLfloat x, GLfloat y, GLfloat z);
+/** @brief Specifies an amount to displace objects within the display window.
+ *
+ * Transformations are cumulative and apply to everything that happens after and subsequent calls to the function accumulates the effect.
+ * For example, calling translate(50, 0) and then translate(20, 0) is the same as translate(70, 0).
+ * If translate() is called within update(), the transformation is reset when the loop begins again.
+ * This function can be further controlled by using pushMatrix() and popMatrix().
+ *
+ * @note Using this function with the z parameter requires using window3d().
+ *
+ * @param x Amount to move left/right
+ * @param y Amount to move up/down
+ */
+void translate(GLfloat x, GLfloat y);
+
+/** @brief Rotates around the x-axis the amount specified by the angle parameter.
+ *
+ * Angles should be specified in radians (values from 0 to TWO_PI) or converted from degrees to radians with the radians() function.
+ * Coordinates are always rotated around their relative position to the origin.
+ * Positive numbers rotate in a clockwise direction and negative numbers rotate in a counterclockwise direction.
+ * Transformations apply to everything that happens after and subsequent calls to the function accumulates the effect.
+ * For example, calling rotateX(PI/2) and then rotateX(PI/2) is the same as rotateX(PI).
+ * If rotateX() is run within the update(), the transformation is reset when the loop begins again.
+ *
+ * @param angle Angle of rotation in radians.
+ */
+void rotateX(GLfloat angle);
+/** @brief Rotates around the y-axis the amount specified by the angle parameter.
+ *
+ * Angles should be specified in radians (values from 0 to TWO_PI) or converted from degrees to radians with the radians() function.
+ * Coordinates are always rotated around their relative position to the origin.
+ * Positive numbers rotate in a clockwise direction and negative numbers rotate in a counterclockwise direction.
+ * Transformations apply to everything that happens after and subsequent calls to the function accumulates the effect.
+ * For example, calling rotateY(PI/2) and then rotateY(PI/2) is the same as rotateY(PI).
+ * If rotateY() is run within the update(), the transformation is reset when the loop begins again.
+ *
+ * @param angle Angle of rotation in radians.
+ */
+void rotateY(GLfloat angle);
+/** @brief Rotates around the z-axis the amount specified by the angle parameter.
+ *
+ * Angles should be specified in radians (values from 0 to TWO_PI) or converted from degrees to radians with the radians() function.
+ * Coordinates are always rotated around their relative position to the origin.
+ * Positive numbers rotate in a clockwise direction and negative numbers rotate in a counterclockwise direction.
+ * Transformations apply to everything that happens after and subsequent calls to the function accumulates the effect.
+ * For example, calling rotateY(PI/2) and then rotateY(PI/2) is the same as rotateY(PI).
+ * If rotateY() is run within the update(), the transformation is reset when the loop begins again.
+ *
+ * @note Using this function requires using window3d().
+ *
+ * @param angle Angle of rotation in radians.
+ */
+void rotateZ(GLfloat angle);
+/** @brief Rotates the amount specified by the angle parameter.
+ *
+ * Angles must be specified in radians (values from 0 to TWO_PI), or they can be converted from degrees to radians with the radians() function.
+ *
+ * The coordinates are always rotated around their relative position to the origin.
+ * Positive numbers rotate objects in a clockwise direction and negative numbers rotate in the couterclockwise direction.
+ * Transformations apply to everything that happens afterward, and subsequent calls to the function compound the effect.
+ * For example, calling rotate(PI/2.0) once and then calling rotate(PI/2.0) a second time is the same as a single rotate(PI).
+ * All tranformations are reset when draw() begins again.
+ *
+ * Technically, rotate() multiplies the current transformation matrix by a rotation matrix.
+ * This function can be further controlled by pushMatrix() and popMatrix().
+ *
+ * @param angle
+ */
+void rotate(GLfloat angle);
 
 #endif //EASYSDL_EASYSDL_H
