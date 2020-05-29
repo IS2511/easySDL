@@ -11,8 +11,7 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
-
-//#include "easySDL_opengl.h"
+#include <SDL2/SDL_mixer.h>
 
 const float TWO_PI = 6.2831855f;
 const float PI = 3.1415927f;
@@ -56,6 +55,7 @@ public:
 //    static bool get_windowWidth() { int w = 0; SDL_GetWindowSize(window, &w, nullptr); return w; };
 //    static bool get_windowHeight() { int h = 0; SDL_GetWindowSize(window, nullptr, &h); return h; };
     static SDL_Color get_strokeColor() { return strokeColor; };
+    static SDL_Color get_fillColor() { return fillColor; };
 //    static void set_windowFlags(Uint32 flags) { return SDL_SetWindowFlags(window, flags); }; // TODO: remove/replace
 
 
@@ -86,6 +86,7 @@ private: // Yeah, I'm not documenting private
     static Uint32 time_step;
     static Uint32 last_step;
     static Uint32 frameTimes[10];
+    static SDL_Color fillColor;
     static SDL_Color strokeColor;
 };
 
@@ -127,17 +128,7 @@ int pmouseY = 0;
  * @param h Window height in screen coordinates.
  * @param flags SDL2 flags for SDL_CreateWindow().
  */
-void window(const char* title, int w, int h, Uint32 flags);
-
-/** @brief Create a window with default SDL2 flags.
- *
- * @note Can only be run once.
- *
- * @param title Window title in UTF-8.
- * @param w Window width in screen coordinates.
- * @param h Window height in screen coordinates.
- */
-void window(const char* title, int w, int h);
+void window(const char* title, int w, int h, Uint32 flags = 0);
 
 /** @brief Create a window with SDL2 flags and OpenGL context (3D).
  *
@@ -147,17 +138,7 @@ void window(const char* title, int w, int h);
  * @param w Window width in screen coordinates.
  * @param h Window height in screen coordinates.
  */
-void window3d(const char* title, int w, int h, Uint32 flags);
-
-/** @brief Create a window with default SDL2 flags and OpenGL context (3D).
- *
- * @note Can only be run once.
- *
- * @param title Window title in UTF-8.
- * @param w Window width in screen coordinates.
- * @param h Window height in screen coordinates.
- */
-void window3d(const char* title, int w, int h);
+void window3d(const char* title, int w, int h, Uint32 flags = 0);
 
 /** @brief Turns vsync on or off.
  *
@@ -169,7 +150,7 @@ void vsyncMode(bool enable);
 
 /** @brief Get vsync state.
  *
- *
+ * @return Vsync state. true if ON and false if OFF.
  */
 bool vsyncMode();
 
@@ -181,7 +162,7 @@ void windowFlags(Uint32 flags);
 
 /** @brief Get window flags.
  *
- *
+ * @return Window flags.
  */
 Uint32 windowFlags();
 
@@ -234,14 +215,7 @@ Uint32 millis();
  * @param b The blue value (0-255)
  * @param a The alpha value, opacity (0-255)
  */
-void fill(Uint8 r, Uint8 g, Uint8 b, Uint8 a);
-/** @brief Set the fill color. Alpha is 255 by default.
- *
- * @param r The red value (0-255)
- * @param g The green value (0-255)
- * @param b The blue value (0-255)
- */
-void fill(Uint8 r, Uint8 g, Uint8 b);
+void fill(Uint8 r, Uint8 g, Uint8 b, Uint8 a = 255);
 /** @brief Set the fill color. Alpha is 255 by default.
  *
  * @param r The red value (0-255)
@@ -264,14 +238,7 @@ void fill(SDL_Color color);
  * @param b The blue value (0-255)
  * @param a The alpha value, opacity (0-255)
  */
-void stroke(Uint8 r, Uint8 g, Uint8 b, Uint8 a);
-/** @brief Set the stroke color. Alpha is 255 by default.
- *
- * @param r The red value (0-255)
- * @param g The green value (0-255)
- * @param b The blue value (0-255)
- */
-void stroke(Uint8 r, Uint8 g, Uint8 b);
+void stroke(Uint8 r, Uint8 g, Uint8 b, Uint8 a = 255);
 /** @brief Set the stroke color. Alpha is 255 by default.
  *
  * @param c Same for Red, Green and Blue (0-255)
@@ -294,14 +261,7 @@ void stroke(SDL_Color color);
  * @param b The blue value (0-255)
  * @param a The alpha value, opacity (0-255)
  */
-void background(Uint8 r, Uint8 g, Uint8 b, Uint8 a);
-/** @brief Fill the background with color. Alpha is 255 by default.
- *
- * @param r The red value (0-255)
- * @param g The green value (0-255)
- * @param b The blue value (0-255)
- */
-void background(Uint8 r, Uint8 g, Uint8 b);
+void background(Uint8 r, Uint8 g, Uint8 b, Uint8 a = 255);
 /** @brief Fill the background with color. Alpha is 255 by default.
  *
  * @param c Same for Red, Green and Blue (0-255)
@@ -352,20 +312,7 @@ void popMatrix();
  * @param y Amount to move up/down
  * @param z Amount to move toward/away
  */
-void translate(GLfloat x, GLfloat y, GLfloat z);
-/** @brief Specifies an amount to displace objects within the display window.
- *
- * Transformations are cumulative and apply to everything that happens after and subsequent calls to the function accumulates the effect.
- * For example, calling translate(50, 0) and then translate(20, 0) is the same as translate(70, 0).
- * If translate() is called within update(), the transformation is reset when the loop begins again.
- * This function can be further controlled by using pushMatrix() and popMatrix().
- *
- * @note Using this function with the z parameter requires using window3d().
- *
- * @param x Amount to move left/right
- * @param y Amount to move up/down
- */
-void translate(GLfloat x, GLfloat y);
+void translate(GLfloat x, GLfloat y, GLfloat z = 0);
 
 /** @brief Rotates around the x-axis the amount specified by the angle parameter.
  *

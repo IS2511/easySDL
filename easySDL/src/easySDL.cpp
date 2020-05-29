@@ -27,6 +27,7 @@ bool easySDL::vsync = false;
 Uint32 easySDL::time_step = 0;
 Uint32 easySDL::last_step = 0;
 Uint32 easySDL::frameTimes[10] = {0};
+SDL_Color easySDL::fillColor = { 255, 255, 255, 255};
 SDL_Color easySDL::strokeColor = { 0, 0, 0, 255};
 
 
@@ -88,6 +89,13 @@ void easySDL::super_update() {
 
     pmouseX = mouseX; pmouseY = mouseY;
     SDL_GetMouseState(&mouseX, &mouseY);
+
+    if (mode3d) {
+        glLoadIdentity();
+        glTranslatef(-1.0f, 1.0f, 0.0f); // Translating origin to top left
+        glScalef(2.0f/width, 2.0f/height, 2.0f/width);
+        glScalef(1.0f, -1.0f, 1.0f);
+    }
 
     // Running user update()
     update();
@@ -158,7 +166,6 @@ void easySDL::handle_event(SDL_Event* event) {
 }
 
 void easySDL::createWindow(const char *title, int w, int h, Uint32 flags) {
-//    static bool createWindow_once = false;
     if (!createWindow_once) {
         mode3d = flags && SDL_WINDOW_OPENGL;
 
@@ -171,9 +178,15 @@ void easySDL::createWindow(const char *title, int w, int h, Uint32 flags) {
             glcontext = SDL_GL_CreateContext(window);
             vsyncMode(false); // vsync is off by default
             glEnable(GL_DEPTH_TEST);
-            // TODO: set some defaults
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glEnable(GL_MULTISAMPLE);
+            glEnable(GL_LINE_SMOOTH);
+//            glEnable(GL_POLYGON_SMOOTH);
+            // TODO: MORE glEnable()!!!
+            // TODO: Some day we will even have culling... Some day...
         } else {
-            renderer = SDL_CreateRenderer(window, -1, 0); // TODO: Any flags?
+            renderer = SDL_CreateRenderer(window, -1, 0); // TODO: Any flags? I think defaults are OK
         }
         createWindow_once = true;
     }
@@ -200,15 +213,16 @@ void easySDL::vsyncMode(bool enable) {
 }
 
 void easySDL::fill(Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
-    if (mode3d) {
-        glColor4b(r, g, b, a);
-    } else {
-        SDL_SetRenderDrawColor(renderer, r, g, b, a);
-    }
+    fillColor = {r, g, b, a};
+//    if (mode3d) {
+//        glColor4ub(r, g, b, a);
+//    } else {
+//        SDL_SetRenderDrawColor(renderer, r, g, b, a);
+//    }
 }
 
 void easySDL::stroke(Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
-    strokeColor = {r, g, b, a}; // TODO: Write implementation for stroke
+    strokeColor = {r, g, b, a};
 }
 
 
@@ -221,16 +235,8 @@ void window(const char* title, int w, int h, Uint32 flags) {
     easySDL::createWindow(title, w, h, flags);
 }
 
-void window(const char* title, int w, int h) {
-    window(title, w, h, 0);
-}
-
 void window3d(const char* title, int w, int h, Uint32 flags) {
     window(title, w, h, flags | SDL_WINDOW_OPENGL);
-}
-
-void window3d(const char* title, int w, int h) {
-    window(title, w, h, SDL_WINDOW_OPENGL);
 }
 
 void vsyncMode(bool enable) {
@@ -276,14 +282,12 @@ Uint32 millis() {
 void fill(Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
     easySDL::fill(r, g, b, a);
 }
-void fill(Uint8 r, Uint8 g, Uint8 b) { fill(r, g, b, 255); }
 void fill(Uint8 c) { fill(c, c, c, 255); }
 void fill(SDL_Color color) { fill(color.r, color.g, color.b, color.a); }
 
 void stroke(Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
     easySDL::stroke(r, g, b, a);
 }
-void stroke(Uint8 r, Uint8 g, Uint8 b) { stroke(r, g, b, 255); }
 void stroke(Uint8 c) { stroke(c, c, c, 255); }
 void stroke(SDL_Color color) { stroke(color.r, color.g, color.b, color.a); }
 
@@ -291,7 +295,6 @@ void background(Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
     glClearColor((float)r/255, (float)g/255, (float)b/255, (float)a/255);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
-void background(Uint8 r, Uint8 g, Uint8 b) { background(r, g, b, 255); }
 void background(Uint8 c) { background(c, c, c, 255); }
 void background(SDL_Color color) { background(color.r, color.g, color.b, color.a); }
 
@@ -304,15 +307,13 @@ void background(SDL_Color color) { background(color.r, color.g, color.b, color.a
 void box(GLfloat w, GLfloat h, GLfloat d) {
     if (!easySDL::get_mode3d()) return;
     if (w == 0 or h == 0 or d == 0) return;
-    w = w/width;
-    h = h/width; // TODO: Is this correct?
-    d = d/width; // TODO: Is this correct?
+    pushMatrix();
     glScalef(w, h, d);
 
     // Fill
-    GLfloat currentColor[4];
-    glGetFloatv(GL_CURRENT_COLOR, currentColor);
-    if (currentColor[3] != 0.0f) {
+    SDL_Color c = easySDL::get_fillColor();
+    if (c.a != 0) {
+        glColor4ub(c.r, c.g, c.b, c.a);
         glBegin(GL_QUADS);
         // Top
         glNormal3f(0.0f, 1.0f, 0.0f);
@@ -360,46 +361,42 @@ void box(GLfloat w, GLfloat h, GLfloat d) {
     }
 
     // Stroke
-    if (easySDL::get_strokeColor().a != 0) {
-        glBegin(GL_LINE_STRIP); // TODO: Make proper lines idiot
-        // Top
-        glVertex3f(-0.5f, 0.5f, 0.5f);
-        glVertex3f(0.5f, 0.5f, 0.5f);
-        glVertex3f(0.5f, 0.5f, -0.5f);
-        glVertex3f(-0.5f, 0.5f, -0.5f);
+    c = easySDL::get_strokeColor();
+    if (c.a != 0) {
+        glColor4ub(c.r, c.g, c.b, c.a);
+        //   5 +---+ 6  // 1 (-0.5f,  0.5f,  0.5f)
+        //     | B |    // 2 ( 0.5f,  0.5f,  0.5f)
+        //   8 +---+ 7  // 3 ( 0.5f, -0.5f,  0.5f)
+        //    // //     // 4 (-0.5f, -0.5f,  0.5f)
+        // 1 +---+ 2    // 5 (-0.5f,  0.5f, -0.5f)
+        //   | F |      // 6 ( 0.5f,  0.5f, -0.5f)
+        // 4 +---+ 3    // 7 ( 0.5f, -0.5f, -0.5f)
+        //              // 8 (-0.5f, -0.5f, -0.5f)
+        // 2143267856 15 37
+        glBegin(GL_LINE_STRIP);
+        glVertex3f( 0.5f,  0.5f,  0.5f); // 2
+        glVertex3f(-0.5f,  0.5f,  0.5f); // 1
+        glVertex3f(-0.5f, -0.5f,  0.5f); // 4
+        glVertex3f( 0.5f, -0.5f,  0.5f); // 3
+        glVertex3f( 0.5f,  0.5f,  0.5f); // 2
+        glVertex3f( 0.5f,  0.5f, -0.5f); // 6
+        glVertex3f( 0.5f, -0.5f, -0.5f); // 7
+        glVertex3f(-0.5f, -0.5f, -0.5f); // 8
+        glVertex3f(-0.5f,  0.5f, -0.5f); // 5
+        glVertex3f( 0.5f,  0.5f, -0.5f); // 6
+        glEnd();
 
-        // Front
-        glVertex3f(0.5f, -0.5f, 0.5f);
-        glVertex3f(0.5f, 0.5f, 0.5f);
-        glVertex3f(-0.5f, 0.5f, 0.5f);
-        glVertex3f(-0.5f, -0.5f, 0.5f);
+        glBegin(GL_LINES);
+        glVertex3f(-0.5f,  0.5f,  0.5f);
+        glVertex3f(-0.5f,  0.5f, -0.5f);
+        glEnd();
 
-        // Right
-        glVertex3f(0.5f, 0.5f, -0.5f);
-        glVertex3f(0.5f, 0.5f, 0.5f);
-        glVertex3f(0.5f, -0.5f, 0.5f);
-        glVertex3f(0.5f, -0.5f, -0.5f);
-
-        // Left
-        glVertex3f(-0.5f, -0.5f, 0.5f);
-        glVertex3f(-0.5f, 0.5f, 0.5f);
-        glVertex3f(-0.5f, 0.5f, -0.5f);
-        glVertex3f(-0.5f, -0.5f, -0.5f);
-
-        // Bottom
-        glVertex3f(0.5f, -0.5f, 0.5f);
-        glVertex3f(-0.5f, -0.5f, 0.5f);
-        glVertex3f(-0.5f, -0.5f, -0.5f);
-        glVertex3f(0.5f, -0.5f, -0.5f);
-
-        // Back
-        glVertex3f(0.5f, 0.5f, -0.5f);
-        glVertex3f(0.5f, -0.5f, -0.5f);
-        glVertex3f(-0.5f, -0.5f, -0.5f);
-        glVertex3f(-0.5f, 0.5f, -0.5f);
-
+        glBegin(GL_LINES);
+        glVertex3f( 0.5f, -0.5f,  0.5f);
+        glVertex3f( 0.5f, -0.5f, -0.5f);
         glEnd();
     }
+    popMatrix();
 }
 void box(GLfloat size) {
     box(size, size, size);
@@ -426,27 +423,24 @@ void popMatrix() {
 
 void translate(GLfloat x, GLfloat y, GLfloat z) {
     if (easySDL::get_mode3d()) {
-        glTranslatef(x/width, y/height, z/width); // TODO: Is this right?
+        glTranslatef(x, y, z);
     } else {
         if (z != 0.0f) return;
         Warn("No matrix manipulation for 2D mode yet!");
     }
 }
-void translate(GLfloat x, GLfloat y) {
-    translate(x, y, 0);
-}
 
 void rotateX(GLfloat angle) {
     if (!easySDL::get_mode3d()) return;
-    glRotatef(angle, 1.0f, 0.0f, 0.0f);
+    glRotatef(degrees(angle), 1.0f, 0.0f, 0.0f);
 }
 void rotateY(GLfloat angle) {
     if (!easySDL::get_mode3d()) return;
-    glRotatef(angle, 0.0f, 1.0f, 0.0f);
+    glRotatef(degrees(angle), 0.0f, 1.0f, 0.0f);
 }
 void rotateZ(GLfloat angle) {
     if (easySDL::get_mode3d()) {
-        glRotatef(angle, 0.0f, 0.0f, 1.0f);
+        glRotatef(degrees(angle), 0.0f, 0.0f, 1.0f);
     } else {
         Warn("No matrix manipulation for 2D mode yet!");
     }

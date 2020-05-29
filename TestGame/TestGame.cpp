@@ -3,8 +3,9 @@
 
 #include <iostream>
 
+int rotX, rotY, rotZ = 0;
+
 void setup() {
-    // Here goes code
     window3d("New game 1", 1280, 720);
 //    window("New game 1", 1280, 720);
     vsyncMode(false);
@@ -13,17 +14,24 @@ void setup() {
 }
 
 void update() {
-    // Here goes code
 //    if (frameCount%(60) == 0) std::cout << "FPS: " << frameRate << " | FrameDelta: " << frameDelta <<  std::endl;
-    if (frameCount%(60) == 0) std::cout << "mouseX: " << mouseX << " | mouseY: " << mouseY <<  std::endl;
+//    if (frameCount%(60) == 0) std::cout << "mouseX: " << mouseX << " | mouseY: " << mouseY <<  std::endl;
     background(200);
 
     pushMatrix();
 
-    translate(mouseX, mouseY);
-    rotateY(radians(10));
-    rotateX(radians(10));
-    box(720);
+    rotY = (float)mouseX/width*360;
+    rotX = (float)mouseY/height*360;
+
+//    fill((float)mouseX/width*255);
+    stroke((float)mouseY/height*255);
+
+//    translate(mouseX, mouseY);
+    translate(width/2, height/2);
+    rotateX(radians(rotX));
+    rotateY(radians(rotY));
+    rotateZ(radians(rotZ));
+    box(200);
 
     popMatrix();
 
