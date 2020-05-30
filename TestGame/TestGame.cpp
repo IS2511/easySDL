@@ -4,6 +4,7 @@
 #include <iostream>
 
 int rotX, rotY, rotZ = 0;
+int mouseWheelY = 0;
 
 void setup() {
     window3d("New game 1", 1280, 720);
@@ -24,27 +25,31 @@ void update() {
     rotX = (float)mouseY/height*360;
 
 //    fill((float)mouseX/width*255);
-    stroke((float)mouseY/height*255);
+    stroke((float)mouseWheelY/60*255);
 
 //    translate(mouseX, mouseY);
     translate(width/2, height/2);
     rotateX(radians(rotX));
     rotateY(radians(rotY));
     rotateZ(radians(rotZ));
-    box(200);
+    box(400, 200, 100);
 
     popMatrix();
 
     if (frameCount == 60*40) quit();
 }
 
+void mouseWheel(SDL_Event* event) { // TODO: Fix later
+    mouseWheelY += event->wheel.y * ( (int)(event->wheel.direction == SDL_MOUSEWHEEL_NORMAL)*2 - 1 );
+}
+
 
 int main()
 {
     printf("Hello world!\n");
-    printf("Pointers: %p :  %p\n", setup, main);
 
-    easySDL::main(setup, update);
+    registerHandler(SDL_MOUSEWHEEL, mouseWheel);
+    return easySDL::main(setup, update);
 
-    printf("Graceful exit.");
+//    printf("Graceful exit.");
 }

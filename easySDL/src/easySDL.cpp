@@ -18,9 +18,11 @@ void (*easySDL::update)();
 SDL_Window* easySDL::window;
 SDL_Renderer* easySDL::renderer;
 SDL_GLContext easySDL::glcontext;
+EventHandlerPtr easySDL::eventHandler[SDL_LASTEVENT] = {nullptr}; // Is this necessary
 
 int easySDL::main_return_code = 0;
 bool easySDL::createWindow_once = false;
+bool easySDL::super_setup_once = false;
 bool easySDL::quit_flag = false;
 bool easySDL::mode3d = false;
 bool easySDL::vsync = false;
@@ -62,26 +64,29 @@ void Debug(std::string str) {
 
 
 void easySDL::super_setup() {
-    // Initializing SDL2
-    if (SDL_Init(SDL_INIT_EVERYTHING) < 0) { // TODO: Initialize only needed?
-        printf("Error initializing SDL: %s\n", SDL_GetError());
-        quit_flag = true;
-        main_return_code = -1; // Critical failure or something
-    }
+    if (!super_setup_once) {
+        super_setup_once = true;
 
-    // Setting defaults
-    time_step = 1000 / 60; // Default FPS is 60
+        // Initializing SDL2
+        if (SDL_Init(SDL_INIT_EVERYTHING) < 0) { // TODO: Initialize only needed?
+            printf("Error initializing SDL: %s\n", SDL_GetError());
+            quit_flag = true;
+            main_return_code = -1; // Critical failure or something
+        }
 
-    // Running user setup()
-    setup();
+        // Setting defaults
+        time_step = 1000 / 60; // Default FPS is 60
 
-    if (!createWindow_once) {
-        Warn("No window created in setup!");
+        // Running user setup()
+        setup();
+
+        if (!createWindow_once) {
+            Warn("No window created in setup!");
+        }
     }
 }
 
 void easySDL::super_update() {
-    // TODO: Screen clear? Buffers? Renderer!?
 
     SDL_Event event;
     while (SDL_PollEvent(&event))
@@ -157,10 +162,15 @@ int easySDL::main(void (*setupPtr)(), void (*updatePtr)()) {
 }
 
 void easySDL::handle_event(SDL_Event* event) {
-    switch (event->type) { // TODO: Add more events
+    switch (event->type) { // TODO: Add more special cases
         case SDL_QUIT:
             // TODO: Handle! global Quit()?
             super_quit();
+            break;
+        default:
+            if (eventHandler[event->type] != nullptr) {
+                eventHandler[event->type](event);
+            }
             break;
     }
 }
@@ -184,6 +194,7 @@ void easySDL::createWindow(const char *title, int w, int h, Uint32 flags) {
             glEnable(GL_LINE_SMOOTH);
 //            glEnable(GL_POLYGON_SMOOTH);
             // TODO: MORE glEnable()!!!
+            // TODO: Figure out good line antialiasing!
             // TODO: Some day we will even have culling... Some day...
         } else {
             renderer = SDL_CreateRenderer(window, -1, 0); // TODO: Any flags? I think defaults are OK
@@ -192,18 +203,29 @@ void easySDL::createWindow(const char *title, int w, int h, Uint32 flags) {
     }
 }
 
+void easySDL::registerHandler(SDL_EventType eventType, EventHandlerPtr handler) {
+    // TODO: Register events based on type!!!
+    eventHandler[eventType] = handler; // TODO: Check if we are in setup()?
+}
+
+void easySDL::unregisterHandler(SDL_EventType eventType) {
+    eventHandler[eventType] = nullptr;
+}
+
 void easySDL::vsyncMode(bool enable) {
     if (enable == vsync) return;
     if (mode3d) {
         if (enable) {
             if (!SDL_GL_SetSwapInterval(-1)) {
                 if (!SDL_GL_SetSwapInterval(1)) {
-                    ErrorSDL("Failed to enable VSYNC");
+                    ErrorSDL("Failed to enable VSYNC!");
+                    return;
                 }
             }
         } else {
             if (!SDL_GL_SetSwapInterval(0)) {
-                ErrorSDL("Failed to disable VSYNC");
+                ErrorSDL("Failed to disable VSYNC!");
+                return;
             }
         }
     } else {
@@ -214,11 +236,6 @@ void easySDL::vsyncMode(bool enable) {
 
 void easySDL::fill(Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
     fillColor = {r, g, b, a};
-//    if (mode3d) {
-//        glColor4ub(r, g, b, a);
-//    } else {
-//        SDL_SetRenderDrawColor(renderer, r, g, b, a);
-//    }
 }
 
 void easySDL::stroke(Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
@@ -372,7 +389,7 @@ void box(GLfloat w, GLfloat h, GLfloat d) {
         //   | F |      // 6 ( 0.5f,  0.5f, -0.5f)
         // 4 +---+ 3    // 7 ( 0.5f, -0.5f, -0.5f)
         //              // 8 (-0.5f, -0.5f, -0.5f)
-        // 2143267856 15 37
+        // 2143267856 15 37 48
         glBegin(GL_LINE_STRIP);
         glVertex3f( 0.5f,  0.5f,  0.5f); // 2
         glVertex3f(-0.5f,  0.5f,  0.5f); // 1
@@ -389,11 +406,12 @@ void box(GLfloat w, GLfloat h, GLfloat d) {
         glBegin(GL_LINES);
         glVertex3f(-0.5f,  0.5f,  0.5f);
         glVertex3f(-0.5f,  0.5f, -0.5f);
-        glEnd();
 
-        glBegin(GL_LINES);
         glVertex3f( 0.5f, -0.5f,  0.5f);
         glVertex3f( 0.5f, -0.5f, -0.5f);
+
+        glVertex3f(-0.5f, -0.5f,  0.5f);
+        glVertex3f(-0.5f, -0.5f, -0.5f);
         glEnd();
     }
     popMatrix();

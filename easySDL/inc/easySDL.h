@@ -18,6 +18,8 @@ const float PI = 3.1415927f;
 const float HALF_PI = 1.5707964f;
 const float QUARTER_PI = 0.7853982f;
 
+typedef void (*EventHandlerPtr)(SDL_Event*);
+
 /** @class easySDL
  * @brief Helper static class, used to hide some inner mechanisms.
  * @warning You actually shouldn't use any of the static methods
@@ -34,18 +36,10 @@ public:
      */
     static int main(void (*setupPtr)(), void (*updatePtr)());
 
-//    /** @brief Not intended for usage, use quit() instead.
-//     *
-//     * @see quit()
-//     */
     static void super_quit();
-
-//    /** @brief Not intended for usage, use window() or window3d() instead.
-//     *
-//     * @see window()
-//     * @see window3d()
-//     */
     static void createWindow(const char* title, int w, int h, Uint32 flags);
+    static void registerHandler(SDL_EventType eventType, EventHandlerPtr handler);
+    static void unregisterHandler(SDL_EventType eventType);
 
 
     // "Get" functions
@@ -73,6 +67,7 @@ private: // Yeah, I'm not documenting private
     static SDL_Window* window;
     static SDL_Renderer* renderer;
     static SDL_GLContext glcontext;
+    static EventHandlerPtr eventHandler[SDL_LASTEVENT];
 
     static void super_setup();
     static void super_update();
@@ -80,6 +75,7 @@ private: // Yeah, I'm not documenting private
 
     static int main_return_code;
     static bool createWindow_once;
+    static bool super_setup_once;
     static bool quit_flag;
     static bool mode3d;
     static bool vsync;
@@ -165,6 +161,29 @@ void windowFlags(Uint32 flags);
  * @return Window flags.
  */
 Uint32 windowFlags();
+
+/** @brief Register an event handler.
+ *
+ * For now check the SDL2 documentation to know more about events.
+ *
+ * @param eventType See SDL_EventType for options.
+ * @param handler This function will be called with an SDL_Event* as an argument.
+ */
+void registerHandler(SDL_EventType eventType, EventHandlerPtr handler) {
+    EventHandlerPtr handlerPtr;
+
+    easySDL::registerHandler(eventType, handler);
+}
+
+/** @brief Unregister an event handler. Event will be 'ignored'.
+ *
+ * For now check the SDL2 documentation to know more about events.
+ *
+ * @param eventType See SDL_EventType for options.
+ */
+void unregisterHandler(SDL_EventType eventType) {
+    easySDL::unregisterHandler(eventType); // TODO: Add checks or something
+}
 
 /// @brief Quit with proper cleanup.
 void quit();
